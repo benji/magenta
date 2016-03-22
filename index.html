@@ -1,0 +1,122 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <script src="jquery-2.1.4.min.js"></script>
+    <script src="script.js"></script>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+    <div id="container">
+      <div id="console"></div>
+      <div>
+        <h3>The magenta experiement</h3>
+        <ol>
+          <li>Select 2 colors</li>
+          <li>The left rectangle is showing the average of the 2 wavelengths</li>
+          <li>The right rectangle is showing a mixed pattern made of alternating pixels between those 2 colors</li>
+        </ol>
+        <canvas id="myCanvas" width="800px" height="160px" onclick="pickColor(event)"></canvas>
+        <p>The goal is to demonstrate how our eyes create <a href="https://en.wikipedia.org/wiki/Magenta#In_optics_and_color_science">colors that have no corresponding wavelength</a>.</p>
+        <p>Pick the colors Blue and Red, and you will see that the average wavelength show Green (left), whereas the mixed pattern of Red and Blue pixels show Magenta (right).</p>
+      </div>
+    </div>
+    <script>
+      var k=1
+      var startWL = 380
+      var stopWL = 780
+      var xscale = 2
+      var h = 50
+      var maxIdx = stopWL-startWL
+      var canvas, ctx
+      
+      $( document ).ready(function() {
+        canvas = document.getElementById("myCanvas")
+        ctx = canvas.getContext("2d");
+        ctx.scale(xscale, 1);
+        
+        var gradient = ctx.createLinearGradient(0, 0, k*maxIdx, 0);
+        
+        for (var i=0 ; i <= maxIdx ; i++) {
+          gradient.addColorStop(1.*i/maxIdx, getColor(startWL+i));
+        }
+        
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, k*maxIdx, h);
+      });
+      
+      var currentColorSwitch = false
+      var lastColorWL = -1
+      
+      function pickColor(evt) {
+        var rect = canvas.getBoundingClientRect();
+        var x = evt.clientX - rect.left
+        var y = evt.clientY - rect.top
+        
+        var wl = startWL+x/2
+        var c = getColor(wl)
+        
+        var yrect = h+25
+        if (currentColorSwitch) yrect+=40
+        
+        //reset
+        ctx.fillStyle = "white";
+        ctx.fillRect(0, yrect, 20, 20);
+        
+        //paint
+        ctx.fillStyle = c;
+        ctx.fillRect(0, yrect, 20, 20);
+        currentColorSwitch = !currentColorSwitch
+        
+        drawPattern(wl,currentColorSwitch)
+        
+        if (lastColorWL != -1) {
+          ctx.fillStyle = "white";
+          ctx.fillRect(60, 60, 100, 100)
+          
+          var avgWL = parseInt( (wl+lastColorWL)/2 )
+          ctx.fillStyle = getColor( avgWL )
+          ctx.fillRect(60, 60, 100, 100)
+        }
+        
+        lastColorWL = wl
+      }
+
+      var patternX = 200
+      var patternY = 60
+      var patternH = 100
+      var patternW = 100
+      var intensity, colfunc
+      
+      var smoothfunc = function(v) { return Math.pow( Math.sin(v*Math.PI/2), 2/3); }
+
+      function drawPattern(wl,s) {
+        var colarr = getColorArr(wl)
+
+        for (var j=0 ; j<patternH ; j++) {
+          if (j<patternH/2) {
+            intensity = smoothfunc( 2.*j/patternH )
+            colfunc = function(c) { return intensity*c; }
+          } else {
+            intensity =  smoothfunc(  2 - 2.*j/patternH )
+            colfunc = function(c) { return c + (255-c)*(1-intensity); }
+          }
+
+          colarrtmp = [parseInt(colfunc(colarr[0])), parseInt(colfunc(colarr[1])), parseInt(colfunc(colarr[2])), 1.]
+
+          for (var i=0 ; i<patternW ; i++) {
+            if (s) {
+              ctx.fillStyle = "white"
+              ctx.fillRect( i+patternX, j+patternY, 1, 1 );
+              ctx.fillStyle = getColorFromArr(colarrtmp)
+              ctx.fillRect( i+patternX, j+patternY, 1, 1 );
+            }
+            s = !s
+          }
+          s = !s
+        }
+      }
+      
+    </script>
+  </body>
+</html>
+      
